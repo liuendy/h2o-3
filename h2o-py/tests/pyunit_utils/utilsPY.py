@@ -3458,7 +3458,8 @@ def genDMatrix(h2oFrame, xlist, yresp, enumCols=[]):
     pandaFtrain.drop([yresp], axis=1, inplace=True)
     pandaF = pd.concat([c0, pandaFtrain], axis=1)
     pandaF.rename(columns={c0.columns[0]:yresp}, inplace=True)
-    data = pandaF.as_matrix(xlist)
+    newX = list(pandaFtrain.columns.values)
+    data = pandaF.as_matrix(newX)
     label = pandaF.as_matrix([yresp])
 
     return xgb.DMatrix(data=data, label=label)

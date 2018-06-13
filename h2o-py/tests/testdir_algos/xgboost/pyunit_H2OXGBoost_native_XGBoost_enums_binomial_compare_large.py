@@ -34,7 +34,8 @@ def comparison_test():
                    'max_depth': h2oParamsD["max_depth"]}
 
     nrows = 100000
-    ncols = 10
+#    ncols = 10
+    ncols = 1
     factorL = 10
 
     trainFile = pyunit_utils.genTrainFiles(nrows, 0, enumCols=ncols, enumFactors=factorL)     # load in dataset and add response column
