@@ -36,7 +36,7 @@ def comparison_test():
     nrows = 100000
 #    ncols = 10
     ncols = 1
-    factorL = 10
+    factorL = 3
 
     trainFile = pyunit_utils.genTrainFiles(nrows, 0, enumCols=ncols, enumFactors=factorL)     # load in dataset and add response column
     myX = trainFile.names
@@ -64,7 +64,8 @@ def comparison_test():
                                                                              h2oPredictTimeS, h2oPredictTimeD))
 
     # train the native XGBoost
-    nativeTrain = pyunit_utils.genDMatrix(trainFile, myX, y, myX)
+    #nativeTrain = pyunit_utils.genDMatrix(trainFile, y, enumCols=myX)
+    nativeTrain = pyunit_utils.genDMatrix2(trainFile, y, enumCols=myX)
     nativeModel = xgb.train(params=nativeParam,
                             dtrain=nativeTrain)
     nativeTrainTime = time.time()-time1

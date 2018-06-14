@@ -3435,9 +3435,10 @@ def getMojoName(modelID):
     return regex.sub("_", modelID)
 
 
-def genDMatrix(h2oFrame, xlist, yresp, enumCols=[]):
+def genDMatrix(h2oFrame, yresp, enumCols=[]):
     """
-    This method will convert a H2OFrame containing all numerical dataset to a DMatrix that is used by native XGBoost
+    This method will convert a H2OFrame containing all numerical dataset to a DMatrix that is used by native XGBoost.
+    We added an extra level of missing(NA) column.  Note that we do not deal with NA/missing values here
 
     :param h2oFrame:
     :param xlist:
@@ -3447,6 +3448,42 @@ def genDMatrix(h2oFrame, xlist, yresp, enumCols=[]):
     import xgboost as xgb
 
     pandaFtrain = h2oFrame.as_data_frame(use_pandas=True, header=True)
+    nrows = h2oFrame.nrow
+
+    # need to fix categoricals
+    for cname in enumCols:
+        cmissingNames = [cname+".missing(NA)"]
+        zeroFrame = pd.DataFrame(np.zeros((nrows,1)))
+        zeroFrame.columns=cmissingNames
+        temp = pd.get_dummies(pandaFtrain[cname], prefix=cname, drop_first=False)
+        ctemp=pd.concat([temp,zeroFrame], axis=1)
+        pandaFtrain.drop([cname], axis=1, inplace=True)
+        pandaFtrain = pd.concat([ctemp, pandaFtrain], axis=1)
+
+    c0= h2oFrame[yresp].asnumeric().as_data_frame(use_pandas=True, header=True)
+    pandaFtrain.drop([yresp], axis=1, inplace=True)
+    pandaF = pd.concat([c0, pandaFtrain], axis=1)
+    pandaF.rename(columns={c0.columns[0]:yresp}, inplace=True)
+    newX = list(pandaFtrain.columns.values)
+    data = pandaF.as_matrix(newX)
+    label = pandaF.as_matrix([yresp])
+
+    return xgb.DMatrix(data=data, label=label)
+
+def genDMatrix2(h2oFrame, yresp, enumCols=[]):
+    """
+    This method will convert a H2OFrame containing all numerical dataset to a DMatrix that is used by native XGBoost.
+    We added an extra level of missing(NA) column.  Note that we do not deal with NA/missing values here
+
+    :param h2oFrame:
+    :param xlist:
+    :param yresp:
+    :return:
+    """
+    import xgboost as xgb
+
+    pandaFtrain = h2oFrame.as_data_frame(use_pandas=True, header=True)
+    nrows = h2oFrame.nrow
 
     # need to fix categoricals
     for cname in enumCols:

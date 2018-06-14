@@ -35,7 +35,8 @@ def comparison_test():
 
     nrows = 100000
     ncols = 10
-    factorL = 10
+    testTol = 1e-6
+    factorL = random.randint(2, 10)
     numCols = random.randint(1, ncols)
     enumCols = ncols-numCols
     if enumCols == 0:
@@ -69,7 +70,7 @@ def comparison_test():
                                                                              h2oPredictTimeS, h2oPredictTimeD))
 
     # train the native XGBoost
-    nativeTrain = pyunit_utils.genDMatrix(trainFile, myX, y, enumCols=enumCols)
+    nativeTrain = pyunit_utils.genDMatrix(trainFile, y, enumCols=enumCols)
     nativeModel = xgb.train(params=nativeParam,
                             dtrain=nativeTrain)
     nativeTrainTime = time.time()-time1
@@ -78,7 +79,7 @@ def comparison_test():
     nativeScoreTime = time.time()-time1
 
     pyunit_utils.summarizeResult_binomial_DS(h2oPredictD, nativePred, h2oTrainTimeD, nativeTrainTime,
-                                             h2oPredictTimeD, nativeScoreTime, h2oPredictS, tolerance=1e-4)
+                                             h2oPredictTimeD, nativeScoreTime, h2oPredictS, tolerance=testTol)
 
 if __name__ == "__main__":
     pyunit_utils.standalone_test(comparison_test)
