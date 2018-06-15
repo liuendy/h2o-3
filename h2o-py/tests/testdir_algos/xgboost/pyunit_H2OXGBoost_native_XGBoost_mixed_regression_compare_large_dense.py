@@ -40,7 +40,7 @@ def comparison_test_dense():
     numCols = random.randint(1, ncols)
     enumCols = ncols-numCols
 
-    trainFile = pyunit_utils.genTrainFiles(nrows, numCols, enumCols=enumCols,  enumFactors=factorL)     # load in dataset and add response column
+    trainFile = pyunit_utils.genTrainFiles(nrows, numCols, enumCols=enumCols,  enumFactors=factorL, miscfrac=0.01)     # load in dataset and add response column
     y='response'
     trainFile = trainFile.drop(y)   # drop the enum response and generate real values here
     yresp = 0.99*pyunit_utils.random_dataset_numeric_only(nrows, 1, integerR = 1000000, misFrac=0)

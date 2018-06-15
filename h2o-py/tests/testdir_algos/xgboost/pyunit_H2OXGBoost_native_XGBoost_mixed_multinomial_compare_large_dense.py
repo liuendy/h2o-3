@@ -42,7 +42,7 @@ def comparison_test_dense():
                    'max_depth': h2oParamsD["max_depth"],
                    'num_class':responseL}
     trainFile = pyunit_utils.genTrainFiles(nrows, numCols, enumCols=enumCols,  enumFactors=factorL,
-                                           responseLevel=responseL)
+                                           responseLevel=responseL, miscfrac=0.01)
     myX = trainFile.names
     y='response'
     myX.remove(y)

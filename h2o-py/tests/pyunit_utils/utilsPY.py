@@ -3474,7 +3474,17 @@ def genDMatrix(h2oFrame, yresp, enumCols=[]):
 
 def generatePandaEnumCols(pandaFtrain, cname, nrows):
     cmissingNames=[cname+".missing(NA)"]
-    zeroFrame = pd.DataFrame(np.zeros((nrows,1), dtype=np.int))
+    tempnp = np.zeros((nrows,1), dtype=np.int)
+    # check for nan and assign it correct value
+    colVals = pandaFtrain[cname]
+    for ind in range(nrows):
+        try:
+            float(colVals[ind])
+            if math.isnan(colVals[ind]):
+                tempnp[ind]=1
+        except ValueError:
+            pass
+    zeroFrame = pd.DataFrame(tempnp)
     zeroFrame.columns=cmissingNames
     temp = pd.get_dummies(pandaFtrain[cname], prefix=cname, drop_first=False)
     ctemp=pd.concat([temp,zeroFrame], axis=1)   # transformed H2O enum column to panda enum columns plus NA column
@@ -3560,11 +3570,11 @@ def summarizeResult_multinomial(h2oPredictD, nativePred, h2oTrainTimeD, nativeTr
                 "H2O prediction prob: {0} and native XGBoost prediction prob: {1}.  They are very " \
                 "different.".format(h2oPredictLocalD[colnames[col+1]][ind], nativePred[ind][col])
 
-def genTrainFiles(nrow, ncol, enumCols=0, enumFactors=2, responseLevel=2):
+def genTrainFiles(nrow, ncol, enumCols=0, enumFactors=2, responseLevel=2, miscfrac=0):
     if ncol>0:
-        trainFrameNumerics = random_dataset_numeric_only(nrow, ncol, integerR = 1000000, misFrac=0)
+        trainFrameNumerics = random_dataset_numeric_only(nrow, ncol, integerR = 1000000, misFrac=miscfrac)
     if enumCols > 0:
-        trainFrameEnums = random_dataset_enums_only(nrow, enumCols, factorL=enumFactors, misFrac=0)
+        trainFrameEnums = random_dataset_enums_only(nrow, enumCols, factorL=enumFactors, misFrac=miscfrac)
 
     yresponse = random_dataset_enums_only(nrow, 1, factorL=responseLevel, misFrac=0)
     yresponse.set_name(0,'response')
