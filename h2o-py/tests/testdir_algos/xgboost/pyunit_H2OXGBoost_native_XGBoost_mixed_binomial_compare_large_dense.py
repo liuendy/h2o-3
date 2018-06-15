@@ -7,16 +7,17 @@ from tests import pyunit_utils
 
 '''
 The goal of this test is to compare the results of H2OXGBoost and natibve XGBoost for binomial classification.
-The dataset contains only enum columns.
+The dataset contains both numerical and enum columns.
 '''
-def comparison_test():
+def comparison_test_dense():
     assert H2OXGBoostEstimator.available() is True
+
     runSeed = random.randint(1, 1073741824)
+    testTol = 1e-6
     ntrees = 10
-    h2oParamsD = {"ntrees":ntrees, "max_depth":4, "seed":runSeed, "learn_rate":0.7, "col_sample_rate_per_tree" : 0.9,
+    maxdepth = 5
+    h2oParamsD = {"ntrees":ntrees, "max_depth":maxdepth, "seed":runSeed, "learn_rate":0.7, "col_sample_rate_per_tree" : 0.9,
                  "min_rows" : 5, "score_tree_interval": ntrees+1, "dmatrix_type":"dense"}
-    h2oParamsS = {"ntrees":ntrees, "max_depth":4, "seed":runSeed, "learn_rate":0.7, "col_sample_rate_per_tree" : 0.9,
-                  "min_rows" : 5, "score_tree_interval": ntrees+1, "dmatrix_type":"sparse"}
     nativeParam = {'colsample_bytree': h2oParamsD["col_sample_rate_per_tree"],
                    'tree_method': 'auto',
                    'seed': h2oParamsD["seed"],
@@ -33,15 +34,17 @@ def comparison_test():
                    'gamma': 0.0,
                    'max_depth': h2oParamsD["max_depth"]}
 
-    nrows = 100000
-#    ncols = 10
-    ncols = 1
-    factorL = 3
+    nrows = random.randint(100000, 500000)
+    ncols = random.randint(1, 10)
+    factorL = random.randint(2, 10)
+    numCols = random.randint(1, ncols)
+    enumCols = ncols-numCols
 
-    trainFile = pyunit_utils.genTrainFiles(nrows, 0, enumCols=ncols, enumFactors=factorL)     # load in dataset and add response column
+    trainFile = pyunit_utils.genTrainFiles(nrows, numCols, enumCols=enumCols,  enumFactors=factorL)     # load in dataset and add response column
     myX = trainFile.names
     y='response'
     myX.remove(y)
+    enumCols = myX[0:enumCols]
 
     h2oModelD = H2OXGBoostEstimator(**h2oParamsD)
     # gather, print and save performance numbers for h2o model
@@ -51,21 +54,8 @@ def comparison_test():
     h2oPredictD = h2oModelD.predict(trainFile)
     h2oPredictTimeD = time.time()-time1
 
-    h2oModelS = H2OXGBoostEstimator(**h2oParamsS)
-    # gather, print and save performance numbers for h2o model
-    h2oModelS.train(x=myX, y=y, training_frame=trainFile)
-    h2oTrainTimeS = h2oModelS._model_json["output"]["run_time"]
-    time1 = time.time()
-    h2oPredictS = h2oModelS.predict(trainFile)
-    h2oPredictTimeS = time.time()-time1
-
-    print("H2OXGBoost train time with sparse DMatrix is {0}ms.  H2OXGBoost train time with dense DMatrix is {1}ms\n.  H2OGBoost scoring time with sparse DMatrix is {2}s."
-          "  H2OGBoost scoring time with dense DMatrix is {3}s..".format(h2oTrainTimeS, h2oTrainTimeD,
-                                                                             h2oPredictTimeS, h2oPredictTimeD))
-
     # train the native XGBoost
-    #nativeTrain = pyunit_utils.genDMatrix(trainFile, y, enumCols=myX)
-    nativeTrain = pyunit_utils.genDMatrix2(trainFile, y, enumCols=myX)
+    nativeTrain = pyunit_utils.genDMatrix(trainFile, y, enumCols=enumCols)
     nativeModel = xgb.train(params=nativeParam,
                             dtrain=nativeTrain)
     nativeTrainTime = time.time()-time1
@@ -73,11 +63,10 @@ def comparison_test():
     nativePred = nativeModel.predict(data=nativeTrain, ntree_limit=ntrees)
     nativeScoreTime = time.time()-time1
 
-    pyunit_utils.summarizeResult_binomial_DS(h2oPredictD, nativePred, h2oTrainTimeD, nativeTrainTime, h2oPredictTimeD,
-                                 nativeScoreTime, h2oPredictS, tolerance=1e-4)
-
+    pyunit_utils.summarizeResult_binomial(h2oPredictD, nativePred, h2oTrainTimeD, nativeTrainTime, h2oPredictTimeD,
+                                          nativeScoreTime, tolerance=testTol)
 
 if __name__ == "__main__":
-    pyunit_utils.standalone_test(comparison_test)
+    pyunit_utils.standalone_test(comparison_test_dense)
 else:
-    comparison_test()
+    comparison_test_dense()

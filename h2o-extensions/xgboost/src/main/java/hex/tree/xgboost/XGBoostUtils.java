@@ -366,8 +366,7 @@ public class XGBoostUtils {
                     // currentCol + pos might overflow int and the size of current row
                     if (currentCol + pos < data[currentRow].length && currentCol + pos >= 0) {
                         data[currentRow][currentCol + pos] = 1;
-                    }
-                    if (currentCol + offset >= data[currentRow].length || currentCol + offset < 0) { // did we advance to next row?
+                    } else {  // speed up, no need to do another if
                         pos = currentCol + pos - data[currentRow].length;
                         offset = currentCol + offset - data[currentRow].length;
                         currentRow++;
@@ -388,7 +387,7 @@ public class XGBoostUtils {
                     currentCol += offset;
                 }
                 for (int j = 0; j < di._nums; ++j) {
-                    if(currentCol == ARRAY_MAX) {
+                    if(currentCol >= ARRAY_MAX) {
                         currentCol = 0;
                         currentRow++;
                     }
@@ -870,7 +869,7 @@ public class XGBoostUtils {
             }
         }
 
-        return new SparseMatrixDimensions(nonZeroElementsCount, ++rowIndicesCount);
+        return new SparseMatrixDimensions(nonZeroElementsCount, rowIndicesCount);
     }
 
 

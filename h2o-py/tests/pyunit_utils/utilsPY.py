@@ -3450,15 +3450,17 @@ def genDMatrix(h2oFrame, yresp, enumCols=[]):
     pandaFtrain = h2oFrame.as_data_frame(use_pandas=True, header=True)
     nrows = h2oFrame.nrow
 
-    # need to fix categoricals
-    for cname in enumCols:
-        cmissingNames = [cname+".missing(NA)"]
-        zeroFrame = pd.DataFrame(np.zeros((nrows,1)))
-        zeroFrame.columns=cmissingNames
-        temp = pd.get_dummies(pandaFtrain[cname], prefix=cname, drop_first=False)
-        ctemp=pd.concat([temp,zeroFrame], axis=1)
-        pandaFtrain.drop([cname], axis=1, inplace=True)
-        pandaFtrain = pd.concat([ctemp, pandaFtrain], axis=1)
+    if len(enumCols) > 0:   # start with first enum column
+        pandaTrainPart = generatePandaEnumCols(pandaFtrain, enumCols[0], nrows)
+        pandaFtrain.drop([enumCols[0]], axis=1, inplace=True)
+
+        for colInd in range(1, len(enumCols)):
+            cname=enumCols[colInd]
+            ctemp = generatePandaEnumCols(pandaFtrain, cname,  nrows)
+            pandaTrainPart=pd.concat([pandaTrainPart, ctemp], axis=1)
+            pandaFtrain.drop([cname], axis=1, inplace=True)
+
+        pandaFtrain = pd.concat([pandaTrainPart, pandaFtrain], axis=1)
 
     c0= h2oFrame[yresp].asnumeric().as_data_frame(use_pandas=True, header=True)
     pandaFtrain.drop([yresp], axis=1, inplace=True)
@@ -3469,6 +3471,15 @@ def genDMatrix(h2oFrame, yresp, enumCols=[]):
     label = pandaF.as_matrix([yresp])
 
     return xgb.DMatrix(data=data, label=label)
+
+def generatePandaEnumCols(pandaFtrain, cname, nrows):
+    cmissingNames=[cname+".missing(NA)"]
+    zeroFrame = pd.DataFrame(np.zeros((nrows,1), dtype=np.int))
+    zeroFrame.columns=cmissingNames
+    temp = pd.get_dummies(pandaFtrain[cname], prefix=cname, drop_first=False)
+    ctemp=pd.concat([temp,zeroFrame], axis=1)   # transformed H2O enum column to panda enum columns plus NA column
+    return ctemp
+
 
 def genDMatrix2(h2oFrame, yresp, enumCols=[]):
     """
@@ -3516,8 +3527,8 @@ def summarizeResult_binomial(h2oPredictD, nativePred, h2oTrainTimeD, nativeTrain
     :return:
     '''
     # Result comparison in terms of time
-    print("H2OXGBoost train time is {0}ms.  Native XGBoost train time is {1}s\n.  H2OGBoost scoring time is {2}s."
-          "  Native XGBoost scoring time is {3}s.".format(h2oTrainTimeD, nativeTrainTime,
+    print("H2OXGBoost train time is {0}s.  Native XGBoost train time is {1}s.\n  H2OXGBoost scoring time is {2}s."
+          "  Native XGBoost scoring time is {3}s.".format(h2oTrainTimeD/1000.0, nativeTrainTime,
                                                           h2oPredictTimeD, nativeScoreTime))
     # Result comparison in terms of actual prediction value between the two
     colnames = h2oPredictD.names
@@ -3533,8 +3544,8 @@ def summarizeResult_binomial(h2oPredictD, nativePred, h2oTrainTimeD, nativeTrain
 def summarizeResult_multinomial(h2oPredictD, nativePred, h2oTrainTimeD, nativeTrainTime, h2oPredictTimeD,
                                 nativeScoreTime, tolerance=1e-6):
     # Result comparison in terms of time
-    print("H2OXGBoost train time is {0}ms.  Native XGBoost train time is {1}s\n.  H2OGBoost scoring time is {2}s."
-          "  Native XGBoost scoring time is {3}s.".format(h2oTrainTimeD, nativeTrainTime,
+    print("H2OXGBoost train time is {0}s.  Native XGBoost train time is {1}s.\n  H2OGBoost scoring time is {2}s."
+          "  Native XGBoost scoring time is {3}s.".format(h2oTrainTimeD/1000.0, nativeTrainTime,
                                                           h2oPredictTimeD, nativeScoreTime))
     # Result comparison in terms of actual prediction value between the two
     h2oPredictD['predict'] = h2oPredictD['predict'].asnumeric()
@@ -3568,7 +3579,7 @@ def genTrainFiles(nrow, ncol, enumCols=0, enumFactors=2, responseLevel=2):
 
 def summarizeResult_regression(h2oPredictD, nativePred, h2oTrainTimeD, nativeTrainTime, h2oPredictTimeD, nativeScoreTime, tolerance=1e-6):
     # Result comparison in terms of time
-    print("H2OXGBoost train time is {0}ms.  Native XGBoost train time is {1}s\n.  H2OGBoost scoring time is {2}s."
+    print("H2OXGBoost train time is {0}ms.  Native XGBoost train time is {1}s.\n  H2OGBoost scoring time is {2}s."
           "  Native XGBoost scoring time is {3}s.".format(h2oTrainTimeD, nativeTrainTime,
                                                           h2oPredictTimeD, nativeScoreTime))
     # Result comparison in terms of actual prediction value between the two
@@ -3585,8 +3596,8 @@ def summarizeResult_regression(h2oPredictD, nativePred, h2oTrainTimeD, nativeTra
 def summarizeResult_binomial_DS(h2oPredictD, nativePred, h2oTrainTimeD, nativeTrainTime, h2oPredictTimeD,
                                 nativeScoreTime, h2oPredictS, tolerance=1e-6):
     # Result comparison in terms of time
-    print("H2OXGBoost train time with sparse DMatrix is {0}ms.  Native XGBoost train time with dense DMtraix is {1}s\n.  H2OGBoost scoring time is {2}s."
-          "  Native XGBoost scoring time with dense DMatrix is {3}s.".format(h2oTrainTimeD, nativeTrainTime,
+    print("H2OXGBoost train time with sparse DMatrix is {0}s.  Native XGBoost train time with dense DMtraix is {1}s.\n  H2OGBoost scoring time is {2}s."
+          "  Native XGBoost scoring time with dense DMatrix is {3}s.".format(h2oTrainTimeD/1000.0, nativeTrainTime,
                                                                              h2oPredictTimeD, nativeScoreTime))
     # Result comparison in terms of actual prediction value between the two
     h2oPredictD['predict'] = h2oPredictD['predict'].asnumeric()
